@@ -11,7 +11,10 @@ import {
     StakedState,
     Timespec,
     owTransferAddress,
+<<<<<<< HEAD
     owStakingAddress,
+=======
+>>>>>>> Problem: (CE-114) Missing staking transactions support
 } from '../../types';
 import { FeeConfig } from '../../fee';
 import { owFeeConfig } from '../../fee/types';
@@ -51,7 +54,11 @@ export interface DepositTransactionBuilderOptions {
 }
 
 export const owDepositTransactionOptions = ow.object.exactShape({
+<<<<<<< HEAD
     stakingAddress: owStakingAddress,
+=======
+    stakingAddress: ow.string,
+>>>>>>> Problem: (CE-114) Missing staking transactions support
     network: owOptionalNetworkConfig,
 });
 
@@ -63,7 +70,11 @@ export interface UnbondTransactionBuilderOptions {
 }
 
 export const owUnbondTransactionBuilderOptions = ow.object.exactShape({
+<<<<<<< HEAD
     stakingAddress: owStakingAddress,
+=======
+    stakingAddress: ow.string,
+>>>>>>> Problem: (CE-114) Missing staking transactions support
     nonce: ow.number.int16,
     amount: owCoin,
     network: owOptionalNetworkConfig,
