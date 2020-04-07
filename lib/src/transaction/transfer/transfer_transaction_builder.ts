@@ -37,7 +37,7 @@ export class TransferTransactionBuilder extends TransactionBuilder {
 
     private feeConfig!: FeeConfig;
 
-    private incompleteSigningHex?: Buffer;
+    private incompleteHex?: Buffer;
 
     /**
      * Creates an instance of TransferTransactionBuilder.
@@ -152,7 +152,7 @@ export class TransferTransactionBuilder extends TransactionBuilder {
     }
 
     private clearIncompleteSigningHex() {
-        this.incompleteSigningHex = undefined;
+        this.incompleteHex = undefined;
     }
 
     /**
@@ -227,7 +227,7 @@ export class TransferTransactionBuilder extends TransactionBuilder {
             throw new Error('KeyPair does not have private key');
         }
 
-        const incompleteSigningHex = this.prepareIncompleteSigningHex();
+        const incompleteSigningHex = this.prepareIncompletedHex();
 
         let updatedIncompleteSigningHex: Buffer;
         if (this.feeConfig.algorithm === FeeAlgorithm.LinearFee) {
@@ -245,7 +245,7 @@ export class TransferTransactionBuilder extends TransactionBuilder {
             );
         }
 
-        this.incompleteSigningHex = updatedIncompleteSigningHex;
+        this.incompleteHex = updatedIncompleteSigningHex;
     }
 
     /**
@@ -271,8 +271,8 @@ export class TransferTransactionBuilder extends TransactionBuilder {
      * @memberof TransferTransactionBuilder
      */
     public toIncompleteHex(): Buffer {
-        if (this.isSigning()) {
-            return this.incompleteSigningHex!;
+        if (this.hasIncompletedHex()) {
+            return this.incompleteHex!;
         }
 
         return this.buildIncompleteHex();
@@ -285,13 +285,13 @@ export class TransferTransactionBuilder extends TransactionBuilder {
      * @memberof TransferTransactionBuilder
      */
     public isCompleted(): boolean {
-        if (!this.incompleteSigningHex) {
+        if (!this.hasIncompletedHex()) {
             return false;
         }
 
         if (this.feeConfig.algorithm === FeeAlgorithm.LinearFee) {
             return native.transferTransaction.isCompletedLinearFee({
-                incompleteHex: this.incompleteSigningHex,
+                incompleteHex: this.incompleteHex,
                 feeConfig: parseFeeConfigForNative(this.feeConfig),
             });
         }
@@ -321,7 +321,7 @@ export class TransferTransactionBuilder extends TransactionBuilder {
 
         return native.transferTransaction.toHexLinearFee(
             {
-                incompleteHex: this.incompleteSigningHex,
+                incompleteHex: this.incompleteHex,
                 feeConfig: parseFeeConfigForNative(this.feeConfig),
             },
             tendermintAddress,
@@ -341,21 +341,26 @@ export class TransferTransactionBuilder extends TransactionBuilder {
         return this.inputs.length !== 0;
     }
 
-    private prepareIncompleteSigningHex(): Buffer {
-        if (!this.isSigning()) {
-            this.incompleteSigningHex = this.buildIncompleteHex();
+    private prepareIncompletedHex(): Buffer {
+        if (!this.hasIncompletedHex()) {
+            this.incompleteHex = this.buildIncompleteHex();
         }
 
-        return this.incompleteSigningHex!;
+        return this.incompleteHex!;
+    }
+
+    private hasIncompletedHex(): boolean {
+        return !!this.incompleteHex;
     }
 
     private buildIncompleteHex(): Buffer {
-        if (this.feeConfig.algorithm === FeeAlgorithm.LinearFee) {
-            return this.buildIncompleteHexLinearFee();
+        if (this.feeConfig.algorithm !== FeeAlgorithm.LinearFee) {
+            throw new Error(
+                `Unsupported fee algorithm ${this.feeConfig.algorithm}`,
+            );
         }
-        throw new Error(
-            `Unsupported fee algorithm ${this.feeConfig.algorithm}`,
-        );
+
+        return this.buildIncompleteHexLinearFee();
     }
 
     private buildIncompleteHexLinearFee(): Buffer {
@@ -366,9 +371,5 @@ export class TransferTransactionBuilder extends TransactionBuilder {
             viewKeys: this.viewKeys,
             feeConfig: parseFeeConfigForNative(this.feeConfig),
         });
-    }
-
-    private isSigning(): boolean {
-        return !!this.incompleteSigningHex;
     }
 }
