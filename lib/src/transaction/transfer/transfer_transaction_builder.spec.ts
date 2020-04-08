@@ -705,6 +705,117 @@ describe('TransferTransactionBuilder', () => {
         });
     });
 
+    describe('addWitness', () => {
+        it('should throw Error when the input index is negative', () => {
+            const builder = new TransferTransactionBuilder();
+
+            builder
+                .addInput({
+                    prevTxId:
+                        '0000000000000000000000000000000000000000000000000000000000000000',
+                    prevIndex: 0,
+                    prevOutput: {
+                        address:
+                            'cro1p8c38xgv26c0wlzf0m8gugnn3fpaucrf5p98zhfaqvj4xr8mf97sp54ap3',
+                        value: new BigNumber('1000'),
+                    },
+                })
+                .addOutput({
+                    address:
+                        'cro1p8c38xgv26c0wlzf0m8gugnn3fpaucrf5p98zhfaqvj4xr8mf97sp54ap3',
+                    value: new BigNumber('1000'),
+                })
+                .addViewKey(
+                    Buffer.from(
+                        '0248b7c5f2325a7ef7dcd68066368fd63a7aad8c4a894414fcd81b227b2178322c',
+                        'hex',
+                    ),
+                );
+            const witness = Buffer.from(
+                '001e649e6ec3165c63b0fa47ffce7d18675f49bf887354a21d0f8ecc4d2be6cb784aad962752d1550913cefdfd7211f97bb80af5713a4692f41ab20bd88c0bc940ebaac52a25455a63e812b57a42439c68c016d05f7d99e84561a2728aebe872a30002fe0a593b63d48ee042035f39432d062c5df78876d16b9c328044bd6e120b7392',
+                'hex',
+            );
+
+            expect(() => {
+                builder.addWitness(-1, witness);
+            }).to.throw(
+                'Expected number `index` to be greater than or equal to 0, got -1',
+            );
+        });
+
+        it('should throw Error when the input index is out of bound', () => {
+            const builder = new TransferTransactionBuilder();
+
+            builder
+                .addInput({
+                    prevTxId:
+                        '0000000000000000000000000000000000000000000000000000000000000000',
+                    prevIndex: 0,
+                    prevOutput: {
+                        address:
+                            'cro1p8c38xgv26c0wlzf0m8gugnn3fpaucrf5p98zhfaqvj4xr8mf97sp54ap3',
+                        value: new BigNumber('1000'),
+                    },
+                })
+                .addOutput({
+                    address:
+                        'cro1p8c38xgv26c0wlzf0m8gugnn3fpaucrf5p98zhfaqvj4xr8mf97sp54ap3',
+                    value: new BigNumber('1000'),
+                })
+                .addViewKey(
+                    Buffer.from(
+                        '0248b7c5f2325a7ef7dcd68066368fd63a7aad8c4a894414fcd81b227b2178322c',
+                        'hex',
+                    ),
+                );
+            const witness = Buffer.from(
+                '001e649e6ec3165c63b0fa47ffce7d18675f49bf887354a21d0f8ecc4d2be6cb784aad962752d1550913cefdfd7211f97bb80af5713a4692f41ab20bd88c0bc940ebaac52a25455a63e812b57a42439c68c016d05f7d99e84561a2728aebe872a30002fe0a593b63d48ee042035f39432d062c5df78876d16b9c328044bd6e120b7392',
+                'hex',
+            );
+
+            expect(() => {
+                builder.addWitness(2, witness);
+            }).to.throw('Expected number `index` to be less than 1, got 2');
+        });
+
+        it('should add the witness to the input', () => {
+            const builder = new TransferTransactionBuilder();
+
+            builder
+                .addInput({
+                    prevTxId:
+                        '0000000000000000000000000000000000000000000000000000000000000000',
+                    prevIndex: 0,
+                    prevOutput: {
+                        address:
+                            'cro1p8c38xgv26c0wlzf0m8gugnn3fpaucrf5p98zhfaqvj4xr8mf97sp54ap3',
+                        value: new BigNumber('1000'),
+                    },
+                })
+                .addOutput({
+                    address:
+                        'cro1p8c38xgv26c0wlzf0m8gugnn3fpaucrf5p98zhfaqvj4xr8mf97sp54ap3',
+                    value: new BigNumber('1000'),
+                })
+                .addViewKey(
+                    Buffer.from(
+                        '0248b7c5f2325a7ef7dcd68066368fd63a7aad8c4a894414fcd81b227b2178322c',
+                        'hex',
+                    ),
+                );
+            const witness = Buffer.from(
+                '001e649e6ec3165c63b0fa47ffce7d18675f49bf887354a21d0f8ecc4d2be6cb784aad962752d1550913cefdfd7211f97bb80af5713a4692f41ab20bd88c0bc940ebaac52a25455a63e812b57a42439c68c016d05f7d99e84561a2728aebe872a30002fe0a593b63d48ee042035f39432d062c5df78876d16b9c328044bd6e120b7392',
+                'hex',
+            );
+
+            expect(builder.isCompleted()).to.eq(false);
+
+            builder.addWitness(0, witness);
+
+            expect(builder.isCompleted()).to.eq(true);
+        });
+    });
+
     describe('isCompleted', () => {
         it('should return false when there transaction has no input', () => {
             const builder = new TransferTransactionBuilder();

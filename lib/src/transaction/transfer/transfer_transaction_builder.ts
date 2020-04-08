@@ -1,4 +1,4 @@
-import ow from 'ow';
+import ow, { NumberPredicate } from 'ow';
 import BigNumber from 'bignumber.js';
 
 import {
@@ -216,11 +216,7 @@ export class TransferTransactionBuilder extends TransactionBuilder {
      * @memberof TransferTransactionBuilder
      */
     public signInput(index: number, keyPair: KeyPair) {
-        ow(
-            index,
-            'index',
-            ow.number.greaterThanOrEqual(0).lessThan(this.inputsLength()),
-        );
+        ow(index, 'index', this.owIndex());
         ow(keyPair, 'KeyPair', owKeyPair);
 
         if (!keyPair.hasPrivateKey()) {
@@ -246,6 +242,43 @@ export class TransferTransactionBuilder extends TransactionBuilder {
         }
 
         this.incompleteHex = updatedIncompleteSigningHex;
+    }
+
+    /**
+     * Add witness to particular input
+     *
+     * @param {number} index input index
+     * @param {Buffer} witness hex encoded witness data
+     * @memberof TransferTransactionBuilder
+     */
+    public addWitness(index: number, witness: Buffer) {
+        ow(index, 'index', this.owIndex());
+        // FIXME: witness verification
+        ow(witness, 'witness', ow.buffer);
+
+        const incompleteSigningHex = this.prepareIncompletedHex();
+
+        let updatedIncompleteSigningHex: Buffer;
+        if (this.feeConfig.algorithm === FeeAlgorithm.LinearFee) {
+            updatedIncompleteSigningHex = native.transferTransaction.addInputWitnessLinearFee(
+                {
+                    incompleteHex: incompleteSigningHex,
+                    feeConfig: parseFeeConfigForNative(this.feeConfig),
+                },
+                index,
+                witness,
+            );
+        } else {
+            throw new Error(
+                `Unsupported fee algorithm ${this.feeConfig.algorithm}`,
+            );
+        }
+
+        this.incompleteHex = updatedIncompleteSigningHex;
+    }
+
+    private owIndex(): NumberPredicate {
+        return ow.number.greaterThanOrEqual(0).lessThan(this.inputsLength());
     }
 
     /**

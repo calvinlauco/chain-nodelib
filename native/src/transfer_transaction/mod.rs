@@ -9,6 +9,7 @@ use chain_core::tx::data::TxId;
 use chain_core::tx::fee::LinearFee;
 // #[cfg(feature = "mock")]
 use chain_core::tx::TxAux;
+use chain_core::tx::witness::TxInWitness;
 use chain_core::tx::{TransactionId, TxObfuscated};
 // #[cfg(feature = "mock")]
 use chain_core::tx::TxEnclaveAux;
@@ -22,7 +23,7 @@ use client_common::{PrivateKey, Result, SignedTransaction, Transaction};
 use client_core::signer::{KeyPairSigner, Signer};
 use client_core::transaction_builder::RawTransferTransactionBuilder;
 use neon::prelude::*;
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Decode, Encode};
 
 use crate::common::Features;
 use crate::error::ClientErrorNeonExt;
@@ -56,6 +57,31 @@ pub fn build_incomplete_hex_linear_fee(mut ctx: FunctionContext) -> JsResult<JsB
     for output in options.raw_tx_options.outputs.iter() {
         builder.add_output(output.to_owned());
     }
+
+    let value = &builder.to_incomplete();
+    let mut buffer = ctx.buffer(value.len() as u32)?;
+    ctx.borrow_mut(&mut buffer, |data| {
+        let slice = data.as_mut_slice();
+        slice.copy_from_slice(&value);
+    });
+    Ok(buffer)
+}
+
+/// Add witness to a particular input
+pub fn add_input_witness_linear_fee(mut ctx: FunctionContext) -> JsResult<JsBuffer> {
+    let mut builder = incomplete_builder_linear_fee_argument(&mut ctx, 0)?;
+    let input_index = ctx.argument::<JsNumber>(1)?.to_string(&mut ctx)?.value();
+    let mut witness = ctx.argument::<JsBuffer>(2)?;
+    let mut witness = witness.borrow_mut(&ctx.lock()).as_slice();
+    let witness = TxInWitness::decode(&mut witness).chain_neon(&mut ctx, "Unable to decode raw witness bytes")?;
+
+    let input_index = input_index
+        .parse::<usize>()
+        .chain_neon(&mut ctx, "Unable to deserialize input index")?;
+
+    builder
+        .add_witness(input_index, witness)
+        .chain_neon(&mut ctx, "Unable to add witness to input")?;
 
     let value = &builder.to_incomplete();
     let mut buffer = ctx.buffer(value.len() as u32)?;
@@ -342,6 +368,9 @@ pub fn register_transfer_transaction_module(ctx: &mut ModuleContext) -> NeonResu
 
     let sign_input_linear_fee_fn = JsFunction::new(ctx, sign_input_linear_fee)?;
     js_object.set(ctx, "signInputLinearFee", sign_input_linear_fee_fn)?;
+
+    let add_input_witness_linear_fee_fn = JsFunction::new(ctx, add_input_witness_linear_fee)?;
+    js_object.set(ctx, "addInputWitnessLinearFee", add_input_witness_linear_fee_fn)?;
 
     let is_completed_linear_fee_fn = JsFunction::new(ctx, is_completed_linear_fee)?;
     js_object.set(ctx, "isCompletedLinearFee", is_completed_linear_fee_fn)?;
